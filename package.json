@@ -1,0 +1,10 @@
+{
+  "name": "bank-ib-mock-api",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Bank IB mock customer lookup and menu-free support workflow API",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": { "node": ">=18" }
+}
