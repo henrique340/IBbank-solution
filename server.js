@@ -96,7 +96,7 @@ async function handleAssistant(request, response) {
       body: JSON.stringify({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: {
-          responseFormat: { text: { mimeType: 'application/json', schema: {
+          responseFormat: { text: { mimeType: 'APPLICATION_JSON', schema: {
             type: 'object', properties: {
               intent: { type: 'string', enum: [...workflows.keys()] },
               answer: { type: 'string' },
