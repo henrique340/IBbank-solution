@@ -108,7 +108,16 @@ async function handleAssistant(request, response) {
       }),
       signal: AbortSignal.timeout(15_000),
     });
-    if (!upstream.ok) throw new Error(`Gemini returned ${upstream.status}`);
+    if (!upstream.ok) {
+      const details = await upstream.json().catch(() => null);
+      console.error(
+        'Gemini API error:',
+        upstream.status,
+        details?.error?.status,
+        details?.error?.message
+      );
+      throw new Error(`Gemini returned ${upstream.status}`);
+    }
     const data = await upstream.json();
     const text = data?.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('');
     const result = JSON.parse(text);
