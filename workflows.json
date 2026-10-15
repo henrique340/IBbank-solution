@@ -1,0 +1,12 @@
+{
+  "workflows": [
+    { "intent": "card_lost", "owner": "Card support", "priority": "URGENT", "procedure": "Advise the customer to use the official banking app or verified support number to secure the lost card immediately. Never state that this demo blocked the card. Transfer to a human specialist." },
+    { "intent": "card_fraud", "owner": "Fraud support", "priority": "URGENT", "procedure": "For unrecognized card charges, advise immediate contact with official support or in-app card controls. Do not request the complete card number, password or CVV. Transfer to a human specialist." },
+    { "intent": "card_general", "owner": "Card support", "priority": "NORMAL", "procedure": "Explain how to check card limits, statement dates, virtual cards and payment status in the official banking app. Never claim to access a real card record." },
+    { "intent": "debt_renegotiation", "owner": "Debt support", "priority": "NORMAL", "procedure": "Explain where the customer can review their agreement in the official banking app, check available options and read terms before accepting. This demo does not approve offers or quote individual amounts." },
+    { "intent": "debt_balance", "owner": "Debt support", "priority": "NORMAL", "procedure": "Personal outstanding amounts require authorized systems. Ask the customer to check the official app and transfer to a human specialist for a verified balance." },
+    { "intent": "debt_payment_pending", "owner": "Debt support", "priority": "NORMAL", "procedure": "Ask the customer to verify the payment reference and date in the official app. A specialist must investigate an individual payment using authorized systems." },
+    { "intent": "account_balance_spending", "owner": "Account support", "priority": "NORMAL", "procedure": "Direct customers to the official app for their personal balance and transaction history. This demo has no access to real transactions." },
+    { "intent": "other", "owner": "Customer support", "priority": "NORMAL", "procedure": "Answer general bank service questions from these fictional procedures, ask for clarification when needed, and offer human support for unresolved or personal requests." }
+  ]
+}

@@ -1,10 +1,9 @@
 {
-  "name": "bank-ib-mock-api",
-  "version": "2.0.0",
+  "name": "banco-ib-render-demo",
+  "version": "1.0.0",
   "private": true,
-  "description": "Bank IB mock customer lookup and menu-free support workflow API",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "engines": { "node": ">=18" }
+  "description": "Bank IB WhatsApp support and optional Infobip SIP voice demo",
+  "engines": { "node": ">=20" },
+  "scripts": { "start": "node server.js", "test": "node --test" },
+  "dependencies": { "openai": "^6.0.0" }
 }
