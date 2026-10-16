@@ -1,0 +1,114 @@
+{
+  "bank": "Bank IB",
+  "scope": "Fictional operating procedures for a recruitment demonstration. These are not actual bank policies, account records, offers, or executed actions.",
+  "workflows": [
+    {
+      "intent": "card_declined",
+      "owner": "Card Support Specialist",
+      "priority": "NORMAL",
+      "customer_need": "My card purchase was declined; help me complete the purchase or understand the next step.",
+      "procedure": [
+        "Ask whether the customer recognizes the attempted purchase. If not, follow card_fraud immediately.",
+        "For a recognized purchase, suggest checking the merchant amount, entered card details, card status and available limit in the official bank app.",
+        "If a detail was entered incorrectly, the customer can correct it and try again once.",
+        "If the purchase still fails, route to a human specialist who can check the specific decline reason in authorized systems."
+      ],
+      "resolution": "Provide actionable checks now. Never guess the actual issuer decline reason or claim to change the card status."
+    },
+    {
+      "intent": "card_bill_limit",
+      "owner": "Card Support Specialist",
+      "priority": "NORMAL",
+      "customer_need": "Understand my card bill, due date, available limit or the difference between full and partial payment.",
+      "procedure": [
+        "Explain the difference between total limit and available limit, or between the full bill and partial payment, depending on the question.",
+        "Guide the customer to check the official bank app for their own amounts, transactions, due date and contractual charges.",
+        "If the question asks for a personal amount, fees, a charge dispute or an unavailable document, route to a human specialist."
+      ],
+      "resolution": "Resolve general questions in chat; never invent a personal balance, bill, interest rate or document delivery capability."
+    },
+    {
+      "intent": "card_fraud",
+      "owner": "Card Security Specialist",
+      "priority": "URGENT",
+      "customer_need": "Report an unrecognized charge, fraud or a suspected card compromise.",
+      "procedure": [
+        "Treat the report as urgent and ask the customer to use the official bank app or established support channels to protect the card.",
+        "Immediately transfer the conversation to a human specialist to verify the transaction and explain the dispute process.",
+        "Do not ask for passwords, CVV or a full card number. Do not claim that a transaction was disputed or that the card was blocked."
+      ],
+      "resolution": "Human transfer is required; the mock API does not execute any security action."
+    },
+    {
+      "intent": "card_lost",
+      "owner": "Card Security Specialist",
+      "priority": "URGENT",
+      "customer_need": "Report a lost or stolen card.",
+      "procedure": [
+        "Treat the report as urgent and direct the customer to the card-protection action in the official bank app or established support channels.",
+        "Immediately transfer to a human specialist for authorized verification and next steps.",
+        "Do not say the card was blocked; this demonstration has no card-blocking integration."
+      ],
+      "resolution": "Human transfer is required; only official systems can confirm a card block."
+    },
+    {
+      "intent": "debt_negotiation",
+      "owner": "Debt Resolution Specialist",
+      "priority": "NORMAL",
+      "customer_need": "Understand repayment options or request a debt renegotiation.",
+      "procedure": [
+        "Explain that a personalized proposal depends on the current contract balance and authorized bank conditions.",
+        "Suggest comparing the total amount, number and value of installments, due dates, late-payment consequences and written terms.",
+        "If the customer requests an actual proposal, a discount, a rate or approval, route to a human specialist."
+      ],
+      "resolution": "Help the customer prepare for negotiation; never present a made-up offer as approved."
+    },
+    {
+      "intent": "debt_balance",
+      "owner": "Debt Resolution Specialist",
+      "priority": "NORMAL",
+      "customer_need": "Find the amount I personally owe or the status of my debt.",
+      "procedure": [
+        "Explain that an individual balance can change with payments, fees and the contract terms.",
+        "Direct the customer to their official bank app or hand over to an agent with access to authorized systems.",
+        "Do not use CPF format validation or a mock registration lookup as proof of identity."
+      ],
+      "resolution": "Route individual financial data requests to a human; this demonstration does not have an authenticated balance API."
+    },
+    {
+      "intent": "debt_payment_pending",
+      "owner": "Debt Resolution Specialist",
+      "priority": "NORMAL",
+      "customer_need": "I paid a debt, but it still appears as unpaid.",
+      "procedure": [
+        "Ask the customer to check the payment date and payment reference in official channels.",
+        "Route to a human specialist to verify the transaction and any applicable processing period.",
+        "Do not request a password or a full card number, or claim to have found the payment."
+      ],
+      "resolution": "Explain useful checks and transfer for actual payment reconciliation."
+    },
+    {
+      "intent": "account_balance_spending",
+      "owner": "Account Support Specialist",
+      "priority": "NORMAL",
+      "customer_need": "See my account balance, statement or personal expenses.",
+      "procedure": [
+        "Direct the customer to their bank's official app for personal balance and transaction history.",
+        "Route to an authorized human specialist if the customer needs help with a specific entry.",
+        "Never fabricate account data or treat a validated CPF as bank authentication."
+      ],
+      "resolution": "No real account data is available in this demonstration."
+    },
+    {
+      "intent": "other",
+      "owner": "Customer Care",
+      "priority": "NORMAL",
+      "customer_need": "Ask an unrelated question or a question without documented Bank IB guidance.",
+      "procedure": [
+        "Ask one brief clarifying question if the request might match a documented workflow.",
+        "Otherwise route the request to a human without inventing a Bank IB product or policy."
+      ],
+      "resolution": "Clarify the request or transfer it to a person."
+    }
+  ]
+}
