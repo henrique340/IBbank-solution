@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { server, validateCpf } = require('../server');
+const { server, validateCpf } = require('./server');
 
 test('CPF verification checks both format and check digits', () => {
   assert.equal(validateCpf('123.456.789-09'), '12345678909');
@@ -35,7 +35,7 @@ test('existing lookup and urgent assistant routes retain their response contract
 
 test('answered test call creates one SIP dialog even if event is repeated', async () => {
   Object.assign(process.env, {
-    ASSISTANT_WEBHOOK_TOKEN: 'demo-token', INFOBIP_EVENTS_TOKEN: 'callback-token',
+    ASSISTANT_WEBHOOK_TOKEN: 'demo-token', INFOBIP_EVENTS_USERNAME: 'demo-events', INFOBIP_EVENTS_TOKEN: 'callback-token',
     ENABLE_OUTBOUND_CALLS: 'true', INFOBIP_BASE_URL: 'https://example.api.infobip.com',
     INFOBIP_API_KEY: 'fake', INFOBIP_VOICE_FROM: '5511888888888',
     INFOBIP_CALLS_CONFIGURATION_ID: 'bank-ib-demo', INFOBIP_SIP_TRUNK_ID: 'trunk-test',
@@ -63,9 +63,13 @@ test('answered test call creates one SIP dialog even if event is repeated', asyn
     assert.equal(start.status, 202);
     assert.equal((await start.json()).callId, 'phone-leg-id');
     const event = { type: 'CALL_ESTABLISHED', callId: 'phone-leg-id' };
+    const denied = await realFetch(`${origin}/webhooks/infobip/calls`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(event),
+    });
+    assert.equal(denied.status, 401);
     for (let attempt = 0; attempt < 2; attempt++) {
       const delivered = await realFetch(`${origin}/webhooks/infobip/calls`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-ib-events-token': 'callback-token' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Basic ${Buffer.from('demo-events:callback-token').toString('base64')}` },
         body: JSON.stringify(event),
       });
       assert.equal(delivered.status, 200);

@@ -1,41 +1,39 @@
-# Bank IB mock customer API
+# Bank IB | Infobip WhatsApp proof of concept
 
-This demo API validates CPF check digits and simulates customer registration for an Infobip WhatsApp chatbot. The implementation and responses are in English. It does **not** check whether a CPF exists in the Receita Federal database.
+An English-language fictional customer-service demo for the Infobip Solutions Engineering assignment. This repository contains the **external Node.js mock API** and fictional procedures. The WhatsApp chatbot, buttons, human-agent queue, and analytics are configured separately in Infobip; their settings are not exported here.
 
-## Run
+The required journey is: request a CPF, validate its format and check digits through the mock API, collect or confirm name and email, allow **Confirm** or **Change**, then transfer the confirmed conversation and collected information to a human agent. A menu-free Gemini assistant and an opt-in outbound **phone** call through Infobip Calls API/SIP are optional extensions. The call is a regular phone call, not WhatsApp Business Calling. This repository does not implement post-call transcripts, summaries, or email delivery.
 
-Node.js 18 or newer; no dependencies to install:
+AI support and voice are optional extensions to the required CPF, confirmation and human-transfer journey.
+
+## Run and deploy
+
+Use **Node.js 20 or newer**. In the repository root:
 
 ```bash
+npm install
+npm test
 npm start
 ```
 
-## Publish on Render with an HTTPS URL
+Use `GET http://localhost:3000/health` to check the process. The base URL (`/`) returns HTTP 404 by design. To deploy on Render, connect the repository as a **Web Service**, select Node, set **Build Command** to `npm install` and **Start Command** to `npm start`, and add the environment values described in [`.env.example`](.env.example). The service binds Render's `PORT` on `0.0.0.0`. Do not upload a populated `.env` or paste provider API keys into Answers.
 
-1. Create a GitHub repository. Upload the *contents* of this folder (`server.js`, `package.json`, `knowledge/`, `README.md`) to the repository root. If you keep the folder inside the repository, set Render's **Root Directory** to that folder instead.
-2. In Render, select **New > Web Service** and connect the GitHub repository.
-3. Set **Language** to `Node`, **Build Command** to `npm install`, and **Start Command** to `npm start`. Select a compute plan, then create the web service.
-4. Copy the assigned URL, such as `https://bank-ib-mock-api.onrender.com`. Test the `POST /customers/lookup` endpoint; opening the base URL in a browser produces a 404 because this demo only provides POST endpoints.
+The server requires no credentials for CPF lookup: submit **synthetic CPF values only**. The assistant requires Gemini and an application token. Outbound calls remain disabled until explicitly configured.
 
-```bash
-curl -X POST https://YOUR-SERVICE.onrender.com/customers/lookup \
-  -H 'Content-Type: application/json' \
-  -d '{"cpf":"123.456.789-09"}'
-```
+## API contract
 
-Render sets the `PORT` environment variable; the server binds it on `0.0.0.0`. Free services may take extra time to answer their first request after inactivity. Use sample CPF data only: this demo endpoint is publicly accessible and has no authentication.
+| Method and route | Purpose | Authentication | Status |
+| --- | --- | --- | --- |
+| `GET /health` | Returns `{ "ok": true, "voiceEnabled": false }` when voice is disabled. | None | Implemented. |
+| `POST /customers/lookup` | Checks CPF format and digits and searches a fictional one-record registry. | None; test data only | Implemented. |
+| `POST /assistant/ask` | Chooses a fictional procedure and returns an English answer, routing and priority. | `x-ib-demo-token: <ASSISTANT_WEBHOOK_TOKEN>` | Implemented; general questions require Gemini. |
+| `POST /voice/start-conversation` | Starts an opt-in outbound `PHONE` call to the allowlisted number. | Same application token | Code implemented; live integration unverified. |
+| `POST /webhooks/infobip/calls` | On `CALL_ESTABLISHED`, requests an Infobip SIP dialog. | HTTP Basic credentials in Infobip event subscription | Code implemented; live integration unverified. |
+| `POST /webhooks/openai` | Verifies webhook signature and accepts an incoming Realtime SIP call. | Signed OpenAI webhook | Code implemented; live integration unverified. |
 
-## Lookup endpoint
+### CPF lookup
 
-`POST http://localhost:3000/customers/lookup`
-
-Request:
-
-```json
-{"cpf":"123.456.789-09"}
-```
-
-Possible responses (HTTP 200):
+Send `POST /customers/lookup` with `Content-Type: application/json` and `{ "cpf": "123.456.789-09" }`. HTTP 200 responses:
 
 ```json
 {"cpfValid":"YES","registered":"YES","name":"Ana Demo","email":"ana.demo@example.com"}
@@ -49,64 +47,48 @@ Possible responses (HTTP 200):
 {"cpfValid":"NO","registered":"NO"}
 ```
 
-Demo inputs: `123.456.789-09` is registered; `987.654.321-00` is valid but unregistered; `111.111.111-11` is invalid. For missing or non-string `cpf`, the API responds with HTTP 400.
+Synthetic test cases: `123.456.789-09` is registered; `987.654.321-00` is valid but unregistered; `111.111.111-11` is invalid. Missing or non-string CPF receives HTTP 400. This registry does **not** authenticate customers or check a government database.
 
-## CPF algorithm
+A format regex accepts 11 digits or `ddd.ddd.ddd-dd`; another rejects repeated digits. The code calculates check digits using `L = 10*d1 + 9*d2 + ... + 2*d9` and `M = 10*d2 + 9*d3 + ... + 2*d10`, following [this explanation of the CPF algorithm](https://www.cnnbrasil.com.br/nacional/saiba-o-que-diz-o-numero-do-seu-cpf/). The next digit is `0` when the remainder modulo 11 is `0` or `1`; otherwise it is `11 - remainder`. For the registered sample, `L = 210` produces `d10 = 0` and `M = 244` produces `d11 = 9`. Regex checks syntax; arithmetic checks validity.
 
-The CPF format is checked with a regular expression, followed by check-digit calculation following [CNN Brasil's explanation](https://www.cnnbrasil.com.br/nacional/saiba-o-que-diz-o-numero-do-seu-cpf/):
+### Assistant and Answers mapping
 
-The format regex accepts `12345678909` or `123.456.789-09`; another regex rejects 11 identical digits. Regex alone cannot validate the check digits, so the code then calculates `L` and `M`.
-
-1. Reject repeated-digit CPFs such as `111.111.111-11`.
-2. Compute `L = 10*d1 + 9*d2 + ... + 2*d9` and `r1 = L % 11`. The tenth digit is `0` if `r1` is `0` or `1`, otherwise `11 - r1`.
-3. Compute `M = 10*d2 + 9*d3 + ... + 2*d10` and `r2 = M % 11`. The eleventh digit is `0` if `r2` is `0` or `1`, otherwise `11 - r2`.
-
-For `123.456.789-09`, `L = 210`, `r1 = 1`, so `d10 = 0`; `M = 244`, `r2 = 2`, so `d11 = 9`.
-
-The article gives the `0`/`1` rule explicitly for the tenth digit but omits that edge case for the eleventh. The implementation applies the same rule to both digits so every computed check digit remains a single decimal digit.
-
-In `server.js`, the variables `d1` through `d11`, `L`, and `M` follow the article's notation directly.
-
-## Infobip chatbot
-
-Configure a REST API call for this endpoint after collecting the CPF in Answers. If `cpfValid` is `NO`, ask the user to try again. If `registered` is `YES`, show the stored name and email for confirmation. Otherwise, collect name and email from the user and continue the mock onboarding flow.
-
-## Menu-free assistant using fictional Bank IB procedures
-
-The separate `POST /assistant/ask` endpoint accepts a free-form customer question and identifies the most relevant process from `knowledge/workflows.json`. Gemini composes a useful original answer in **English** using that fictional procedure; the API returns the process identifier, owner, urgency, answer and human handoff decision. Customers are not required to select a topic. Lost-card, fraud, explicit human-agent and voice requests are handled immediately without a model call when the message matches the built-in rules. Individual financial data and completed bank actions are never fabricated. This is a mock workflow, not an authenticated account integration or the paid Infobip AgentOS product.
-
-1. Create a Gemini API key in Google AI Studio.
-2. In Render, add the environment variables `GEMINI_API_KEY` and `ASSISTANT_WEBHOOK_TOKEN`. Generate a long random `ASSISTANT_WEBHOOK_TOKEN`. Never commit either value.
-3. Redeploy the updated `server.js` **and** `knowledge/` directory. The CPF lookup route is still available.
-4. Replace the Services menu in Infobip Answers with **Save user response** and the English prompt "How can I help you today? Please do not share a password, CVV or full card number." Save the customer's free-form message to a Text attribute such as `CustomerQuestion`.
-5. In the Infobip Answers **API** element, use `POST https://YOUR-SERVICE.onrender.com/assistant/ask`, header `Content-Type: application/json`, header `x-ib-demo-token: YOUR_ASSISTANT_WEBHOOK_TOKEN`, and a JSON body with the key `question` mapped to the `CustomerQuestion` attribute. The placeholder below is illustrative; insert the attribute using the Infobip editor:
+Set `GEMINI_API_KEY` and `ASSISTANT_WEBHOOK_TOKEN` in Render. Use only the latter in the Answers API element's `x-ib-demo-token` header. Call `POST https://YOUR-SERVICE.onrender.com/assistant/ask` with JSON key `question` mapped to an Answers text attribute such as `CustomerQuestion`:
 
 ```json
-{"question":"QUESTION_ATTRIBUTE"}
+{"question":"My card purchase was declined. What should I check?"}
 ```
 
-**Do not send `topic`.** The response body has `intent`, `answer`, `handoff`, `agent`, `process`, `priority`, `offerVoice`, and `caseSummary` fields. Save them to Text attributes using JSON paths `$.intent`, `$.answer`, `$.handoff`, `$.agent`, `$.process`, `$.priority`, `$.offerVoice`, and `$.caseSummary`. `priority=URGENT` marks lost-card and suspicious-charge cases. `offerVoice=YES` means a human handoff may be followed by a call **if WhatsApp Business Calling is enabled**; the API cannot initiate a call by itself. If `handoff` is `YES`, send `answer` and then use **To Agent**. For urgent cases, transfer without waiting for a reply; for normal cases, offer a choice to continue by text or request a call. If `handoff` is `NO`, send `answer` and ask "Did that resolve your question?". A "No" or "Human agent" button goes to **To Agent**. A "New question" button returns to a fresh Save user response. On HTTP errors, configure the API element's fallback to a human agent. Configure Inbox/Conversations for a real human transfer.
+Map the parsed response using `$.intent`, `$.answer`, `$.handoff`, `$.agent`, `$.process`, `$.priority`, `$.offerVoice`, and `$.caseSummary` to Answers text attributes. Verify the paths against the **parsed JSON body** in Answers: a raw HTTP preview may wrap `body` as a JSON string. `priority=URGENT` indicates a lost card or suspected fraud and requires immediate human transfer. `handoff=YES` means show `answer`, then use **To Agent**. `offerVoice=YES` applies when `handoff=NO`: the customer can keep chatting or explicitly accept a phone call; declining returns to the question loop. If the customer still needs help, use **To Agent**. `offerVoice=YES` does not imply a call took place.
 
-Example PowerShell smoke test (after deployment and setting the token locally):
+Card-loss, suspected-fraud and explicit human requests use hard-coded safe responses. General questions call Gemini, using fictional `knowledge/workflows.json` procedures. Individual balances, debt amounts and payment investigations go to a human; no production bank data or action API exists here. Keep a human fallback for Gemini/API failures. Answers must orchestrate buttons, confirmations, chat loops, and transfers: the Node server does not create them.
 
-```powershell
-$headers = @{ 'x-ib-demo-token' = $env:ASSISTANT_WEBHOOK_TOKEN }
-Invoke-RestMethod -Uri 'https://YOUR-SERVICE.onrender.com/assistant/ask' -Method Post -Headers $headers -ContentType 'application/json' -Body '{"question":"My card purchase was declined. What should I check?"}'
-```
+### Optional outbound phone call
 
-Sample answer shape:
+The code includes a gated integration for a **regular phone call**. Enable it only after setting every required value in `.env.example`, configuring an Infobip Calls Configuration and voice event subscription, setting up the SIP trunk and OpenAI Realtime webhook, and testing with the allowlisted recipient. `/health` reports `voiceEnabled=true` when required environment values are present; this does **not** verify external connections or prove a call worked.
+
+After the customer accepts, Answers may call `POST /voice/start-conversation` with the application token and:
 
 ```json
-{"intent":"card_declined","agent":"Card Support Specialist","process":"card_declined","priority":"NORMAL","offerVoice":"NO","caseSummary":"Card Support Specialist | card_declined | My card purchase was declined. What should I check?","answer":"First, confirm that you recognize the purchase and check the card details, card status and available limit in the official app. If it still fails, I can connect you with a specialist to check the specific reason.","handoff":"NO"}
+{"to":"5511999999999","consent":"YES","caseSummary":"Customer asked about a declined card purchase"}
 ```
 
-The model may vary its wording. The application attempts to redact common identifier, card-number and email formats before sending a question to Gemini; do not pass real customer information to this demonstration. No real account balance, payments, card blocks or debt offers are processed. The earlier CPF lookup only validates a fictional registration record and is **not authentication**. Gemini's free tier has limits; provider, hosting and Infobip messaging costs are separate.
+`to` must match `DEMO_ALLOWED_PHONE` exactly in international digits. A successful request returns HTTP 202 with `caseId`, `callId`, `status: "CALLING"`, and `channel: "PHONE"`. HTTP 202 means a call was requested, not that it was answered. Infobip events trigger the SIP dialog, and the OpenAI webhook accepts the incoming SIP leg with English voice instructions. Call correlations are stored in memory; a restart can interrupt callback processing. There is no durable transcript or post-call recap.
 
-## Optional escalation from WhatsApp chat to a voice call
+In the Infobip event subscription, set **Basic authentication**: username `INFOBIP_EVENTS_USERNAME`, password `INFOBIP_EVENTS_TOKEN`, webhook URL `https://YOUR-SERVICE.onrender.com/webhooks/infobip/calls`. This password is separate from `ASSISTANT_WEBHOOK_TOKEN` and `INFOBIP_API_KEY`. The OpenAI webhook at `/webhooks/openai` uses `OPENAI_WEBHOOK_SECRET` from OpenAI's webhook configuration. Never send Gemini or OpenAI keys in Infobip webhook headers.
 
-1. Confirm the WhatsApp sender supports calling. In the Infobip Numbers app, select the sender > WhatsApp tab > **Activate WhatsApp voice**. If the option is missing, the account does not currently have WhatsApp voice routes enabled.
-2. In Inbox/Conversations, configure an inbound route with channel WhatsApp and communication type Calls, assign it to a queue with a voice-capable agent, and configure a waiting strategy.
-3. After **To Agent**, the agent can send a WhatsApp interactive message with a call button inside the active messaging window, or the customer can tap the phone icon in the WhatsApp chat if that icon is enabled for the sender. The **customer** starts this call. For business-initiated calls, first request and receive the customer's WhatsApp call permission.
-4. Map `caseSummary`, `intent` and `priority` to Answers Text attributes that are visible to human agents. Add conversation tags for the relevant specialist queue. The phone call is handled by Infobip Inbox, **not by this mock API**. Check the live call and chat experience on your actual sender before claiming unified context for your demo.
+The [Infobip Calls API guide](https://www.infobip.com/docs/voice-and-video/calls) describes configurations, event subscriptions and SIP dialogs after `CALL_ESTABLISHED`. Its [subscriptions authentication guide](https://www.infobip.com/docs/subscriptions/manage/authentication-settings) documents Basic credentials. [Answers-to-Conversations documentation](https://www.infobip.com/docs/answers/integrations/conversations) explains **To Agent** and agent-visible attributes. Compare actual voice event JSON from the subscription against the handler before the live demo: automated tests simulate only one event shape.
 
-WhatsApp Business Calling is an in-app VoIP call. A regular telephone-network (PSTN) call requires a different Infobip voice setup, a voice-capable number and outbound call integration. This package does not create outbound calls, call recordings, post-call summaries or email messages.
+## Live demonstration checklist
+
+1. In Answers, try an invalid CPF, a valid unregistered CPF and the valid registered sample. Show how the API response populates chatbot attributes.
+2. Collect or confirm name and email, choose **Change** to edit a value, then return to the confirmation and choose **Confirm**.
+3. Immediately hand over to a person with **To Agent**; show the confirmed attributes and conversation in the agent's Conversations workspace.
+4. Show available Infobip operational analytics. If you present the optional AI or voice path, test it separately and distinguish target metrics from measured results.
+
+## Known gaps and evidence
+
+- The repository contains no Answers chatbot export, WhatsApp sender setup, Conversations queue/seat, proof of human handoff, or analytics setup. Verify them in the Infobip portal using the checklist above.
+- The basic assignment requires human transfer **after confirmation**. If presenting optional AI support, demonstrate the required transfer path independently.
+- The API sends no email or WhatsApp follow-up, records no calls, and creates no transcript or post-call summary. It has no real customer database, bank authentication, live financial records, or production retention policy.
+- Tests cover CPF, a synthetic lookup, urgent routing and a mocked voice event. They do not establish live Infobip, Gemini, SIP trunk or OpenAI compatibility.
